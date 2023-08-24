@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MailBee.NET" Version="12.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MailService.OAuthGoogle\MailService.OAuthGoogle.csproj" />
+    <ProjectReference Include="..\MailService.OAuthOffice365\MailService.OAuthOffice365.csproj" />
+    <ProjectReference Include="..\MailService.OAuthOutlook\MailService.OAuthOutlook.csproj" />
+  </ItemGroup>
+
+</Project>
