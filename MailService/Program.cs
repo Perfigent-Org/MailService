@@ -52,15 +52,15 @@ namespace MailService
                     switch (serverType)
                     {
                         case ServerType.Google:
-                            mailService = new Service("466636461440-nob44m3k4c9jr1n3fdtfr4s0vogoh3p4.apps.googleusercontent.com", "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", serverType);
+                            mailService = new Service("Google-ClientId", "Gmail-ClientSecret", serverType);
                             break;
 
                         case ServerType.Office365:
-                            mailService = new Service("17b9156a-feec-4c72-ab42-acc6c6d5590a", "Okw8Q~R2IgKW5MZ3P.bcektjRuGCAnOy2M5uBcTZ", serverType);
+                            mailService = new Service("Office365-ClientId", "Office365-ClientSecret", serverType);
                             break;
 
                         case ServerType.Outlook:
-                            mailService = new Service("17b9156a-feec-4c72-ab42-acc6c6d5590a", "Okw8Q~R2IgKW5MZ3P.bcektjRuGCAnOy2M5uBcTZ", serverType);
+                            mailService = new Service("Outlook-ClientId", "Outlook-ClientSecret", serverType);
                             break;
 
                         default:
@@ -73,15 +73,15 @@ namespace MailService
                     switch (serverType)
                     {
                         case ServerType.Google:
-                            mailService = new Service(serverType, "oauthmailbeetest@gmail.com", "fecgqvhghtzovurk");
+                            mailService = new Service(serverType, "AnyAccountName@gmail.com", "AnyAccountPassword");
                             break;
 
                         case ServerType.Office365:
-                            mailService = new Service(serverType, "testoauthmicroauth@outlook.com", "OAuth@MailBee.com");
+                            mailService = new Service(serverType, "AnyAccountName@outlook.com", "AnyAccountPassword");
                             break;
 
                         case ServerType.Outlook:
-                            mailService = new Service(serverType, "testoauthmicroauth@outlook.com", "OAuth@MailBee.com");
+                            mailService = new Service(serverType, "AnyAccountName@hotmail.com", "AnyAccountPassword");
                             break;
 
                         default:
