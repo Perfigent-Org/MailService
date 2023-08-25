@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,12 +9,11 @@ namespace MailService.OAuthOutlook
 {
     public class OAuth20
     {
-        const string ClientId = "17b9156a-feec-4c72-ab42-acc6c6d5590a";
         private static string _storedRefreshToken = null;
         private static CodeGrantOauth _oauth = null;
         private static string tokenFile = "token.json";
 
-        public async static Task<KeyValuePair<string, string>> Login()
+        public async static Task<KeyValuePair<string, string>> Login(string clientId)
         {
             PersistentAccessToken tokensFromStorage = null;
 
@@ -45,7 +43,7 @@ namespace MailService.OAuthOutlook
 
             if (tokenNeedsRefresh)
             {
-                _oauth = await GetOauthTokensAsync(_storedRefreshToken, ClientId);
+                _oauth = await GetOauthTokensAsync(_storedRefreshToken, clientId);
 
                 string expiresAt = DateTime.UtcNow.AddSeconds(_oauth.Expiration).ToString("o", CultureInfo.InvariantCulture);
 
@@ -55,7 +53,6 @@ namespace MailService.OAuthOutlook
                 File.WriteAllText(tokenFile, json);
             }
 
-            // Get the user's profile. In production app, it's recommended to define properties in the class rather than working with items in Dictionary.
             IDictionary<string, string> userData = await UserProfileUtils.GetUserDataAsync(tokensFromStorage.AccessToken);
 
             return new KeyValuePair<string, string>(userData["email"], tokensFromStorage.AccessToken);
@@ -95,11 +92,12 @@ namespace MailService.OAuthOutlook
             return auth;
         }
 
-        public static async Task Logout()
+        public static async Task Logout(string clientId)
         {
             try
             {
                 if (File.Exists(tokenFile)) File.Delete(tokenFile);
+                if (_oauth == null) _oauth = new CodeGrantOauth(clientId);
                 if (!await _oauth.Logout()) throw new Exception("Please contact administrator");
                 Console.WriteLine("User has signed-out");
             }

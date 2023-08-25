@@ -14,9 +14,21 @@ namespace MailService.MailBee
         protected readonly string _smtpServerName;
         protected readonly ServerType _serverType;
 
+        protected string _clientId;
+        protected string _clientSecret;
         protected string _userEmail;
         protected string _password;
         protected string _accessToken;
+
+        protected readonly HashSet<string> BLACKLISTED_EXTENSIONS = new HashSet<string>
+        {
+            ".ade", ".adp", ".apk", ".appx", ".appxbundle", ".bat", ".cab", ".chm", ".cmd", ".com", ".cpl", ".dll", ".dmg",
+            ".ex", ".ex_", ".exe", ".hta", ".ins", ".isp", ".iso", ".jar", ".js", ".jse", ".lib", ".lnk", ".mde", ".msc",
+            ".msi", ".msix", ".msixbundle", ".msp", ".mst", ".nsh", ".pif", ".ps1", ".scr", ".sct", ".shb", ".sys", ".vb",
+            ".vbe", ".vbs", ".vxd", ".wsc", ".wsf", ".wsh"
+        };
+
+        protected readonly long MAX_ATTACHMENT_SIZE = 19000000; //around 19 MB to account for MIME encoding
 
         private bool IsFrom0Auth => string.IsNullOrWhiteSpace(_password);
 
@@ -62,15 +74,15 @@ namespace MailService.MailBee
                 {
                     case ServerType.Google:
                         {
-                            return ValidateConnection(await OAuthGoogle.OAuth20.Login(_userEmail));
+                            return ValidateConnection(await OAuthGoogle.OAuth20.Login(_clientId, _clientSecret));
                         }
                     case ServerType.Office365:
                         {
-                            return ValidateConnection(await OAuthOffice365.OAuth20.Login());
+                            return ValidateConnection(await OAuthOffice365.OAuth20.Login(_clientId));
                         }
                     case ServerType.Outlook:
                         {
-                            return ValidateConnection(await OAuthOutlook.OAuth20.Login());
+                            return ValidateConnection(await OAuthOutlook.OAuth20.Login(_clientId));
                         }
                 }
             }
@@ -85,13 +97,13 @@ namespace MailService.MailBee
                 switch (_serverType)
                 {
                     case ServerType.Google:
-                        await OAuthGoogle.OAuth20.Logout(); break;
+                        await OAuthGoogle.OAuth20.Logout(_clientId); break;
 
                     case ServerType.Office365:
-                        await OAuthOffice365.OAuth20.Logout(); break;
+                        await OAuthOffice365.OAuth20.Logout(_clientId); break;
 
                     case ServerType.Outlook:
-                        await OAuthOutlook.OAuth20.Logout(); break;
+                        await OAuthOutlook.OAuth20.Logout(_clientId); break;
                 }
 
                 _accessToken = string.Empty;
@@ -121,11 +133,11 @@ namespace MailService.MailBee
                 if (IsFrom0Auth)
                 {
                     string xoauthKey = OAuth2.GetXOAuthKeyStatic(_userEmail, _accessToken);
-                    smtp.SmtpServers.Add(_smtpServerName, null, xoauthKey, AuthenticationMethods.SaslOAuth2);
+                    smtp.SmtpServers.Add(_smtpServerName, null, xoauthKey, AuthenticationMethods.SaslOAuth2).Port = 587;
                 }
                 else
                 {
-                    smtp.SmtpServers.Add(_smtpServerName, _userEmail, _password);
+                    smtp.SmtpServers.Add(_smtpServerName, _userEmail, _password, AuthenticationMethods.SaslLogin | AuthenticationMethods.SaslPlain).Port = 587;
                 }
                 return smtp.Connect();
             }

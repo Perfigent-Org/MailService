@@ -11,12 +11,16 @@ namespace MailService.MailBee
 {
     public class Service : ServiceBase, IService
     {
-        public Service(ServerType type) : base(type) { }
-
-        public Service(ServerType type, string userEmail, string password) : this(type)
+        public Service(ServerType type, string userEmail, string password) : base(type)
         {
             _userEmail = userEmail;
             _password = password;
+        }
+
+        public Service(string clientId, string clientSecret, ServerType type) : base(type)
+        {
+            _clientId = clientId;
+            _clientSecret = clientSecret;
         }
 
         public async Task<IList<long>> GetUidsAsync(string fromFolder = "")
@@ -101,7 +105,6 @@ namespace MailService.MailBee
                 if (Login(imap))
                 {
                     result = await imap.DeleteFolderAsync(folderName);
-
                     await imap.DisconnectAsync();
                 }
 
@@ -184,23 +187,7 @@ namespace MailService.MailBee
             if (string.IsNullOrWhiteSpace(fromFolder))
                 fromFolder = InboxFolderName;
 
-            using (var imap = new Imap())
-            {
-                var result = false;
-
-                if (Login(imap))
-                {
-                    imap.SelectFolder(fromFolder);
-
-                    var uidsString = string.Join(",", uids);
-
-                    result = await imap.SetMessageFlagsAsync(uidsString, true, SystemMessageFlags.Seen, MessageFlagAction.Add);
-
-                    await imap.DisconnectAsync();
-                }
-
-                return result;
-            }
+            return await SetFlagAsync(uids, fromFolder, SystemMessageFlags.Seen, MessageFlagAction.Add);
         }
 
         public async Task<bool> MarkEmailsAsUnreadAsync(long[] uids, string fromFolder = "")
@@ -208,23 +195,7 @@ namespace MailService.MailBee
             if (string.IsNullOrWhiteSpace(fromFolder))
                 fromFolder = InboxFolderName;
 
-            using (var imap = new Imap())
-            {
-                var result = false;
-
-                if (Login(imap))
-                {
-                    imap.SelectFolder(fromFolder);
-
-                    var uidsString = string.Join(",", uids);
-
-                    result = await imap.SetMessageFlagsAsync(uidsString, true, SystemMessageFlags.Seen, MessageFlagAction.Remove);
-
-                    await imap.DisconnectAsync();
-                }
-
-                return result;
-            }
+            return await SetFlagAsync(uids, fromFolder, SystemMessageFlags.Seen, MessageFlagAction.Remove);
         }
 
         public async Task<bool> FlagEmailsAsync(long[] uids, string fromFolder = "")
@@ -232,23 +203,7 @@ namespace MailService.MailBee
             if (string.IsNullOrWhiteSpace(fromFolder))
                 fromFolder = InboxFolderName;
 
-            using (var imap = new Imap())
-            {
-                var result = false;
-
-                if (Login(imap))
-                {
-                    imap.SelectFolder(fromFolder);
-
-                    var uidsString = string.Join(",", uids);
-
-                    result = await imap.SetMessageFlagsAsync(uidsString, true, SystemMessageFlags.Flagged, MessageFlagAction.Add);
-
-                    await imap.DisconnectAsync();
-                }
-
-                return result;
-            }
+            return await SetFlagAsync(uids, fromFolder, SystemMessageFlags.Flagged, MessageFlagAction.Add);
         }
 
         public async Task<bool> UnflagEmailsAsync(long[] uids, string fromFolder = "")
@@ -256,23 +211,7 @@ namespace MailService.MailBee
             if (string.IsNullOrWhiteSpace(fromFolder))
                 fromFolder = InboxFolderName;
 
-            using (var imap = new Imap())
-            {
-                var result = false;
-
-                if (Login(imap))
-                {
-                    imap.SelectFolder(fromFolder);
-
-                    var uidsString = string.Join(",", uids);
-
-                    result = await imap.SetMessageFlagsAsync(uidsString, true, SystemMessageFlags.Flagged, MessageFlagAction.Remove);
-
-                    await imap.DisconnectAsync();
-                }
-
-                return result;
-            }
+            return await SetFlagAsync(uids, fromFolder, SystemMessageFlags.Flagged, MessageFlagAction.Remove);
         }
 
         public async Task<bool> SendEmailAsync(string subject, string body, string[] to, string[] cc = null, string[] bcc = null, bool isHtml = false)
@@ -315,7 +254,7 @@ namespace MailService.MailBee
                 return result;
             }
         }
-        
+
         /// <summary>
         ///  Gmail: The maximum attachment size is 25 MB.
         ///  Yahoo Mail: The maximum attachment size is 25 MB.
@@ -324,9 +263,6 @@ namespace MailService.MailBee
         /// </summary>
         public async Task<bool> SendEmailWithAttachmentsAsync(string subject, string body, string[] to, string[] attachmentPaths, string[] cc = null, string[] bcc = null, bool isHtml = false)
         {
-            long MAX_ATTACHMENT_SIZE = 19000000; //around 19 MB to account for MIME encoding
-            string[] BLACKLISTED_EXTENSIONS = { ".exe", ".bat", ".cmd" }; // Example blacklisted extensions
-
             using (var smtp = new Smtp())
             {
                 var result = false;
@@ -461,47 +397,14 @@ namespace MailService.MailBee
 
         public async Task<bool> ArchiveEmailsAsync(long[] uids, string fromFolder = "")
         {
-            if (string.IsNullOrWhiteSpace(fromFolder))
-                fromFolder = InboxFolderName;
-
-            using (var imap = new Imap())
+            if (_serverType == ServerType.Google)
             {
-                var result = false;
-
-                if (Login(imap))
-                {
-                    var uidsString = string.Join(",", uids);
-
-                    imap.SelectFolder(fromFolder);
-
-                    result = await imap.MoveMessagesAsync(uidsString, true, ArchiveFolderName);
-
-                    await imap.DisconnectAsync();
-                }
-
-                return result;
+                return await DeleteEmailsAsync(uids, fromFolder);
             }
-
-            //if (string.IsNullOrWhiteSpace(fromFolder))
-            //    fromFolder = InboxFolderName;
-
-            //using (var imap = new Imap())
-            //{
-            //    var result = false;
-
-            //    if (Login(imap))
-            //    {
-            //        imap.SelectFolder(fromFolder);
-
-            //        var uidsString = string.Join(",", uids);
-
-            //        result = await imap.DeleteMessagesAsync(uidsString, true);
-            //        await imap.ExpungeAsync(uidsString, true);
-            //        await imap.DisconnectAsync();
-            //    }
-
-            //    return result;
-            //}
+            else
+            {
+                return await MoveEmailsAsync(uids, ArchiveFolderName, fromFolder);
+            }
         }
 
         public async Task<bool> MoveEmailsAsync(long[] uids, string toFolder, string fromFolder = "")
@@ -545,7 +448,28 @@ namespace MailService.MailBee
 
                     result = await imap.DeleteMessagesAsync(uidsString, true);
 
-                    if (hardDelete) await imap.ExpungeAsync();
+                    if (hardDelete) await imap.ExpungeAsync(uidsString, true);
+
+                    await imap.DisconnectAsync();
+                }
+
+                return result;
+            }
+        }
+
+        private async Task<bool> SetFlagAsync(long[] uids, string fromFolder, SystemMessageFlags flag, MessageFlagAction action)
+        {
+            using (var imap = new Imap())
+            {
+                var result = false;
+
+                if (Login(imap))
+                {
+                    imap.SelectFolder(fromFolder);
+
+                    var uidsString = string.Join(",", uids);
+
+                    result = await imap.SetMessageFlagsAsync(uidsString, true, flag, action);
 
                     await imap.DisconnectAsync();
                 }

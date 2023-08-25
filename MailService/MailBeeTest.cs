@@ -9,10 +9,12 @@ namespace MailService
 {
     public class MailBeeTest
     {
+        private const string _testFolder = "TestMailBeeFolder";
+
         private readonly Service _mailService;
 
         IList<long> emailIds = new List<long>();
-        IList<string> folderNames = new List<string>();
+        IList<string> folderNames;
 
         public MailBeeTest(Service mailService)
         {
@@ -33,12 +35,12 @@ namespace MailService
 
             var folders = await _mailService.GetFoldersAsync();
 
+            folderNames = new List<string>();
+
             foreach (Folder folder in folders)
             {
                 Console.WriteLine($"Folder name: {folder.Name}");
-
-                if (!folder.Name.Contains(_mailService.InboxFolderName))
-                    folderNames.Add(folder.Name);
+                folderNames.Add(folder.Name);
             }
 
             Console.WriteLine($"Total folders: {folders.Count}");
@@ -48,15 +50,20 @@ namespace MailService
         {
             Console.WriteLine("\n\n Create new folder");
 
-            var isDone = await _mailService.CreateFolderAsync("TestMailBeeFolder");
+            if (!folderNames.Contains(_testFolder))
+            {
+                await _mailService.CreateFolderAsync(_testFolder);
+            }
+
+            var isDone = await _mailService.CreateFolderAsync($"{_testFolder}1");
 
             if (isDone)
             {
-                Console.WriteLine("\n\n Folder (TestMailBeeFolder) created successfully.");
+                Console.WriteLine($"\n\n Two folders are ({_testFolder}, {_testFolder}1) created successfully.");
             }
             else
             {
-                Console.WriteLine($"\n\n Not able to create new folder (TestMailBeeFolder), Please check logfile. {_mailService.LogFileName}");
+                Console.WriteLine($"\n\n Not able to create new folders ({_testFolder}, {_testFolder}1), Please check logfile. {_mailService.LogFileName}");
             }
         }
 
@@ -64,15 +71,15 @@ namespace MailService
         {
             Console.WriteLine("\n\n Rename folder");
 
-            var isDone = await _mailService.RenameFolderAsync("TestMailBeeFolder", "RenameTestMailBee");
+            var isDone = await _mailService.RenameFolderAsync($"{_testFolder}1", "RenameTestMailBee");
 
             if (isDone)
             {
-                Console.WriteLine("\n\n Folder rename from (TestMailBeeFolder) To (RenameTestMailBee) successfully.");
+                Console.WriteLine($"\n\n Folder rename from ({_testFolder}1) To (RenameTestMailBee) successfully.");
             }
             else
             {
-                Console.WriteLine($"\n\n Not able to rename the folder (TestMailBeeFolder), Please check logfile. {_mailService.LogFileName}");
+                Console.WriteLine($"\n\n Not able to rename the folder ({_testFolder}1), Please check logfile. {_mailService.LogFileName}");
             }
         }
 
@@ -190,7 +197,7 @@ namespace MailService
         {
             Console.WriteLine("\n\n Flag emails");
 
-            var isDone = await _mailService.FlagEmailsAsync(emailIds.Take(2).ToArray());
+            var isDone = await _mailService.FlagEmailsAsync(emailIds.Skip(3).Take(2).ToArray());
 
             if (isDone)
             {
@@ -206,7 +213,7 @@ namespace MailService
         {
             Console.WriteLine("\n\n Unflag emails");
 
-            var isDone = await _mailService.UnflagEmailsAsync(emailIds.Take(2).ToArray());
+            var isDone = await _mailService.UnflagEmailsAsync(emailIds.Skip(3).Take(1).ToArray());
 
             if (isDone)
             {
@@ -220,7 +227,7 @@ namespace MailService
 
         private async Task SendEmailAsync()
         {
-            Console.WriteLine($"\n\n Sending email to { _mailService.Email }");
+            Console.WriteLine($"\n\n Sending email to {_mailService.Email} without attachments");
 
             var isDone = await _mailService.SendEmailAsync("Test Email From MailBee", "This is MailBee Test Email For Testing", new string[] { _mailService.Email });
 
@@ -236,7 +243,7 @@ namespace MailService
 
         private async Task SendEmailWithAttachmentsAsync()
         {
-            Console.WriteLine($"\n\n Sending email to { _mailService.Email }");
+            Console.WriteLine($"\n\n Sending email to {_mailService.Email} with attachments");
 
             string[] attachments = new string[]
                 {
@@ -265,7 +272,7 @@ namespace MailService
 
             var email = await _mailService.GetEmailAsync(emailIds.FirstOrDefault());
 
-            Console.WriteLine($"\n\n Replaying email to { email.ReplyTo }, {email.From}");
+            Console.WriteLine($"\n\n Replaying email to {email.ReplyTo}, {email.From}");
 
             var isDone = await _mailService.ReplayEmailAsync(email, "This is MailBee Test Replay.");
 
@@ -285,7 +292,7 @@ namespace MailService
 
             var email = await _mailService.GetEmailAsync(emailIds.FirstOrDefault());
 
-            Console.WriteLine($"\n\n Forwarding email to { _mailService.Email }");
+            Console.WriteLine($"\n\n Forwarding email to {_mailService.Email}");
 
             var isDone = await _mailService.ForwardEmailAsync(email, new string[] { _mailService.Email });
 
@@ -303,7 +310,7 @@ namespace MailService
         {
             Console.WriteLine("\n\n Archive emails");
 
-            var isDone = await _mailService.ArchiveEmailsAsync(emailIds.Take(1).ToArray());
+            var isDone = await _mailService.ArchiveEmailsAsync(new long[] { emailIds[emailIds.Count - 3] });
 
             if (isDone)
             {
@@ -318,17 +325,16 @@ namespace MailService
         private async Task MoveEmailsAsync()
         {
             Console.WriteLine("\n\n Move emails");
-            var toFolderName = folderNames[4];
 
-            var isDone = await _mailService.MoveEmailsAsync(emailIds.Take(1).ToArray(), toFolderName);
+            var isDone = await _mailService.MoveEmailsAsync(new long[] { emailIds[emailIds.Count - 2] }, _testFolder);
 
             if (isDone)
             {
-                Console.WriteLine($"\n\n Move emails form {_mailService.InboxFolderName} to {toFolderName} successfully.");
+                Console.WriteLine($"\n\n Move emails form {_mailService.InboxFolderName} to {_testFolder} successfully.");
             }
             else
             {
-                Console.WriteLine($"\n\n Not able to move emails form {_mailService.InboxFolderName} to {toFolderName}, Please check logfile. {_mailService.LogFileName}");
+                Console.WriteLine($"\n\n Not able to move emails form {_mailService.InboxFolderName} to {_testFolder}, Please check logfile. {_mailService.LogFileName}");
             }
         }
 
@@ -336,7 +342,7 @@ namespace MailService
         {
             Console.WriteLine("\n\n Delete emails");
 
-            var isDone = await _mailService.DeleteEmailsAsync(emailIds.Take(1).ToArray());
+            var isDone = await _mailService.DeleteEmailsAsync(new long[] { emailIds.Count - 1 });
 
             if (isDone)
             {
@@ -357,13 +363,13 @@ namespace MailService
             await GetUidsAsync();
             await GetEmailsAsync();
             await SearchEmailsAsync();
-            await SendEmailWithAttachmentsAsync();
             await GetEmailAsync();
-            await MarkEmailsAsReadAsync();
             await MarkEmailsAsUnreadAsync();
+            await MarkEmailsAsReadAsync();
             await FlagEmailsAsync();
             await UnflagEmailsAsync();
             await SendEmailAsync();
+            await SendEmailWithAttachmentsAsync();
             await GetUidsAsync();
             await ReplayEmailAsync();
             await ForwardEmailAsync();

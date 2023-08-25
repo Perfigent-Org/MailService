@@ -12,20 +12,16 @@ namespace MailService.OAuthOffice365
         private static string apiEndpoint = "https://outlook.office.com/api/v2.0/me";
         private static string[] scopes = new string[] { "offline_access", "https://outlook.office365.com/IMAP.AccessAsUser.All", "https://outlook.office365.com/SMTP.Send" };
 
-        //private static string apiEndpoint = "https://graph.microsoft.com/v1.0/me";
-        //private static string[] scopes = new string[] { "offline_access", "https://graph.microsoft.com/IMAP.AccessAsUser.All", "https://graph.microsoft.com/SMTP.Send" };
-
-        public async static Task<KeyValuePair<string, string>> Login()
+        public async static Task<KeyValuePair<string, string>> Login(string clientId)
         {
             AuthenticationResult authResult = null;
-            var app = Client.PublicClientApp;
 
-            var accounts = await app.GetAccountsAsync();
+            var accounts = await Client.PublicClientApp(clientId).GetAccountsAsync();
             var firstAccount = accounts.FirstOrDefault();
 
             try
             {
-                authResult = await app.AcquireTokenSilent(scopes, firstAccount)
+                authResult = await Client.PublicClientApp(clientId).AcquireTokenSilent(scopes, firstAccount)
                     .ExecuteAsync();
             }
             catch (MsalUiRequiredException ex)
@@ -34,21 +30,21 @@ namespace MailService.OAuthOffice365
 
                 try
                 {
-                    authResult = await app.AcquireTokenInteractive(scopes)
+                    authResult = await Client.PublicClientApp(clientId).AcquireTokenInteractive(scopes)
                         .WithAccount(accounts.FirstOrDefault())
                         .WithPrompt(Prompt.SelectAccount)
                         .ExecuteAsync();
                 }
                 catch (MsalException msalex)
                 {
-                    try { await Logout(); } catch { }
-                    throw new Exception($"Error Acquiring Token:{System.Environment.NewLine}{msalex}");
+                    try { await Logout(clientId); } catch { }
+                    throw new Exception($"Error Acquiring Token:{Environment.NewLine}{msalex}");
                 }
             }
             catch (Exception ex)
             {
-                try { await Logout(); } catch { }
-                throw new Exception($"Error Acquiring Token Silently:{System.Environment.NewLine}{ex}");
+                try { await Logout(clientId); } catch { }
+                throw new Exception($"Error Acquiring Token Silently:{Environment.NewLine}{ex}");
             }
 
             // Note that you don't need to call this method if you're just looking for the email address, you can use authResult.Account.Username for that.
@@ -101,14 +97,14 @@ namespace MailService.OAuthOffice365
             }
         }
 
-        public static async Task Logout()
+        public static async Task Logout(string clientId)
         {
-            var accounts = await Client.PublicClientApp.GetAccountsAsync();
+            var accounts = await Client.PublicClientApp(clientId).GetAccountsAsync();
             if (accounts.Any())
             {
                 try
                 {
-                    await Client.PublicClientApp.RemoveAsync(accounts.FirstOrDefault());
+                    await Client.PublicClientApp(clientId).RemoveAsync(accounts.FirstOrDefault());
                     Console.WriteLine("User has signed-out");
                 }
                 catch (MsalException ex)

@@ -7,32 +7,34 @@ namespace MailService
     {
         public static void Main(string[] args)
         {
-            //MailBeeGamilServiceWith0Auth20();
+            ConnectMailBeeService(ServiceType.OAuth20, ServerType.Google);
+            ConnectMailBeeService(ServiceType.OAuth20, ServerType.Outlook);
+            ConnectMailBeeService(ServiceType.OAuth20, ServerType.Office365);
 
-            //MailBeeGamilServiceWithIMAPAndSMTP();
-
-            //MailBeeOffice365ServiceWith0Auth20();
-
-            MailBeeOutlookServiceWith0Auth20();
+            ConnectMailBeeService(ServiceType.ImapSmtp, ServerType.Google);
+            ConnectMailBeeService(ServiceType.ImapSmtp, ServerType.Outlook);
+            ConnectMailBeeService(ServiceType.ImapSmtp, ServerType.Office365);
 
             Console.ReadLine();
         }
 
-        private async static void MailBeeGamilServiceWith0Auth20()
+        private static async void ConnectMailBeeService(ServiceType serviceType, ServerType serverType)
         {
             try
             {
-                var mailService = new Service(ServerType.Google);
+                Service mailService = GetMailService(serviceType, serverType);
+
+                Console.WriteLine($"Connecting {serverType} Mail Service...");
 
                 var isConnected = await mailService.Connect();
 
-                if (isConnected) Console.WriteLine("Google mail service is ready to use...");
+                if (isConnected) Console.WriteLine($"{serverType} mail service is ready to use...");
 
                 await MailBeeTest.GetInstance(mailService).Run();
 
                 if (isConnected) await mailService.Disconnect();
 
-                Console.WriteLine("Google mail service is now disconnected...");
+                Console.WriteLine($"{serverType} mail service is now disconnected...");
             }
             catch (Exception ex)
             {
@@ -40,70 +42,58 @@ namespace MailService
             }
         }
 
-        private async static void MailBeeGamilServiceWithIMAPAndSMTP()
+        private static Service GetMailService(ServiceType serviceType, ServerType serverType)
         {
-            try
+            Service mailService;
+            switch (serviceType)
             {
-                var mailService = new Service(ServerType.Google, "chothani.hitesh@gmail.com", "oqdxgsljifsrdtbj");
+                case ServiceType.OAuth20:
 
-                var isConnected = await mailService.Connect();
+                    switch (serverType)
+                    {
+                        case ServerType.Google:
+                            mailService = new Service("466636461440-nob44m3k4c9jr1n3fdtfr4s0vogoh3p4.apps.googleusercontent.com", "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", serverType);
+                            break;
 
-                if (isConnected) Console.WriteLine("Google mail service is ready to use...");
+                        case ServerType.Office365:
+                            mailService = new Service("17b9156a-feec-4c72-ab42-acc6c6d5590a", "Okw8Q~R2IgKW5MZ3P.bcektjRuGCAnOy2M5uBcTZ", serverType);
+                            break;
 
-                await MailBeeTest.GetInstance(mailService).Run();
+                        case ServerType.Outlook:
+                            mailService = new Service("17b9156a-feec-4c72-ab42-acc6c6d5590a", "Okw8Q~R2IgKW5MZ3P.bcektjRuGCAnOy2M5uBcTZ", serverType);
+                            break;
 
-                if (isConnected) await mailService.Disconnect();
+                        default:
+                            throw new Exception("Server type must be Google, Office365 or Outlook");
+                    }
+                    break;
 
-                Console.WriteLine("Google mail service is now disconnected...");
+                case ServiceType.ImapSmtp:
+
+                    switch (serverType)
+                    {
+                        case ServerType.Google:
+                            mailService = new Service(serverType, "oauthmailbeetest@gmail.com", "fecgqvhghtzovurk");
+                            break;
+
+                        case ServerType.Office365:
+                            mailService = new Service(serverType, "testoauthmicroauth@outlook.com", "OAuth@MailBee.com");
+                            break;
+
+                        case ServerType.Outlook:
+                            mailService = new Service(serverType, "testoauthmicroauth@outlook.com", "OAuth@MailBee.com");
+                            break;
+
+                        default:
+                            throw new Exception("Server type must be Google, Office365 or Outlook");
+                    }
+                    break;
+
+                default:
+                    throw new Exception("Service type must be OAuth20 or ImapSmtp");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        }
 
-        private async static void MailBeeOffice365ServiceWith0Auth20()
-        {
-            try
-            {
-                var mailService = new Service(ServerType.Office365);
-
-                var isConnected = await mailService.Connect();
-
-                if (isConnected) Console.WriteLine("Office365 mail service is ready to use...");
-
-                await MailBeeTest.GetInstance(mailService).Run();
-
-                if (isConnected) await mailService.Disconnect();
-
-                Console.WriteLine("Office365 mail service is now disconnected...");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        }
-
-        private async static void MailBeeOutlookServiceWith0Auth20()
-        {
-            try
-            {
-                var mailService = new Service(ServerType.Outlook);
-
-                var isConnected = await mailService.Connect();
-
-                if (isConnected) Console.WriteLine("Outlook mail service is ready to use...");
-
-                await MailBeeTest.GetInstance(mailService).Run();
-
-                if (isConnected) await mailService.Disconnect();
-
-                Console.WriteLine("Outlook mail service is now disconnected...");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+            return mailService;
         }
     }
 }
