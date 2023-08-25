@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="ServiceBase.cs~RFaedcfde.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MailBee.NET" Version="12.3.1" />
   </ItemGroup>
 
