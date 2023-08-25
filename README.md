@@ -43,6 +43,17 @@ The **MailService** repository is designed to provide users with an email servic
 3. Configure OAuth 2.0 credentials for secure authentication.
 4. Build and run the project.
 
+1. **Creating an API Project in Gmail:**
+   - Go to the [Google API Console](https://console.developers.google.com/).
+   - Create a new project.
+   - Enable the Gmail API.
+   - Create credentials and obtain the Client ID and Client Secret.
+
+2. **Setting Up Azure Multitenant with API Permissions:**
+   - Sign in to the [Azure portal](https://portal.azure.com/).
+   - Create a new App Registration.
+   - Configure API permissions for Microsoft Graph API and Outlook.
+
 ## Usage
 
 1. Launch the application.
