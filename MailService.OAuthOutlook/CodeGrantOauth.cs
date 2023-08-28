@@ -55,27 +55,12 @@ namespace MailService.OAuthOutlook
             }
 
             this._clientId = clientId;
-            this._uri = string.Format(this.AuthorizationUri + CodeQueryString, this._clientId, RedirectUri);
+            this._uri = string.Format(this.AuthorizationUri + CodeQueryString + "&prompt=login", this._clientId, RedirectUri);
             this._logoutUri = string.Format(this.LogoutUri + LogoutBody, this._clientId, RedirectUri);
         }
 
         public async Task<string> GetAccessTokenAsync()
         {
-            //ProcessStartInfo psi = new ProcessStartInfo
-            //{
-            //    FileName = _uri,
-            //    UseShellExecute = true
-
-            //};
-            //Process.Start(psi);
-
-            // Here we're requesting the user to copy/paste the code themselves (not UX-friendly but easy to implement). With a desktop app or Forms functionality (.NET Core 3.0+),
-            // it should be possible to intercept the authorization code right from the browser. See "WinForms\.NET 4.5 OAuth\C#\OAuthConsoleApps\MicrosoftLogin.cs"
-            // or https://docs.microsoft.com/en-us/advertising/shopping-content/code-example-authentication-oauth to get the idea.
-            // Or, simply use the 'useLocalServer' mode of this sample.
-            //Console.Write("Please enter the authorization code: ");
-            //string authorizationCode = Console.ReadLine().Trim();
-
             string authorizationCode = await StartTaskAsSTAThread(() => RunWebBrowserFormAndGetCode(_uri));
 
             if (string.IsNullOrEmpty(authorizationCode))
@@ -170,11 +155,19 @@ namespace MailService.OAuthOutlook
         {
             string code = null;
 
-            Form webBrowserForm = new Form();
-            webBrowserForm.WindowState = FormWindowState.Maximized;
-            WebBrowser webBrowser = new WebBrowser();
-            webBrowser.Dock = DockStyle.Fill;
-            webBrowser.Url = new Uri(url);
+            Form webBrowserForm = new Form
+            {
+                WindowState = FormWindowState.Normal,
+                StartPosition = FormStartPosition.CenterScreen,
+                Width = 500,
+                Height = 700
+            };
+
+            WebBrowser webBrowser = new WebBrowser
+            {
+                Dock = DockStyle.Fill,
+                Url = new Uri(url)
+            };
 
             webBrowserForm.Controls.Add(webBrowser);
 
@@ -206,11 +199,16 @@ namespace MailService.OAuthOutlook
         {
             bool isLoggedOut = false;
 
-            Form webBrowserForm = new Form();
-            webBrowserForm.WindowState = FormWindowState.Maximized;
-            WebBrowser webBrowser = new WebBrowser();
-            webBrowser.Dock = DockStyle.Fill;
-            webBrowser.Url = new Uri(url);
+            Form webBrowserForm = new Form
+            {
+                WindowState = FormWindowState.Minimized
+            };
+
+            WebBrowser webBrowser = new WebBrowser
+            {
+                Dock = DockStyle.None,
+                Url = new Uri(url)
+            };
 
             webBrowserForm.Controls.Add(webBrowser);
 
@@ -247,112 +245,5 @@ namespace MailService.OAuthOutlook
             thread.Start();
             return tcs.Task;
         }
-        // Loopback version ('useLocalServer' mode). Starts a local web server on localhost, and makes the browser to access the page hosted on this "server".
-        // When Microsoft web server sends the browser the redirect URL (and that URL's domain is 'localhost'), the browser loads the page
-        // from this local server passing the verification code as a URL parameter. We extract the verification code from it then.
-
-        // Based on Google.Apis.Auth.OAuth2.LocalServerCodeReceiver.
-        // https://github.com/googleapis/google-api-dotnet-client/blob/master/Src/Support/Google.Apis.Auth/OAuth2/LocalServerCodeReceiver.cs
-        // Their implementation is far more advanced and robust, you can check it for details.
-
-        // http://localhost:49217/signin-microsoft must be registered in apps.dev.microsoft.com portal for your app. 49217 is just an arbitrary number, can be anything.
-        private const string LoopbackCallback = "http://localhost:{0}/signin-microsoft/";
-        //        private const string ClosePageResponse =
-        //@"<html>
-        //  <head><title>OAuth 2.0 Authentication Token Received</title></head>
-        //  <body>
-        //    Received verification code. Closing...
-        //    <script type='text/javascript'>
-        //      window.setTimeout(function() {
-        //          window.open('', '_self', ''); 
-        //          window.close(); 
-        //        }, 1000);
-        //      if (window.opener) { window.opener.checkToken(); }
-        //    </script>
-        //  </body>
-        //</html>";
-
-        // So we start a local web server on any unused port and generate the redirect_uri. Something like "http://localhost:60780/signin-microsoft/".
-        // On apps.dev.microsoft.com portal, you registered redirect_uri like "http://localhost:49217/signin-microsoft". It's not a problem that port numbers are different.
-        // You only need to make that that the parts before and after the port number match.
-        //private string _redirectUriLocal;
-        //public string RedirectUriLocal
-        //{
-        //    get
-        //    {
-        //        if (!string.IsNullOrEmpty(_redirectUriLocal))
-        //        {
-        //            return _redirectUriLocal;
-        //        }
-
-        //        return _redirectUriLocal = string.Format(LoopbackCallback, GetRandomUnusedPort());
-        //    }
-        //}
-
-        //public async Task<string> GetAccessTokenFromLocalServerAsync(string clientSecret)
-        //{
-        //    string authorizationUrl = string.Format(this.AuthorizationUri + CodeQueryString, this._clientId, RedirectUriLocal);
-        //    using (HttpListener listener = new HttpListener())
-        //    {
-        //        listener.Prefixes.Add(RedirectUriLocal);
-        //        try
-        //        {
-        //            listener.Start();
-
-
-        //            ProcessStartInfo psi = new ProcessStartInfo
-        //            {
-        //                FileName = authorizationUrl,
-        //                UseShellExecute = true
-        //            };
-
-        //            Process.Start(psi);
-
-        //            // Wait to get the authorization code response.
-        //            HttpListenerContext context = await listener.GetContextAsync().ConfigureAwait(false);
-        //            NameValueCollection coll = context.Request.QueryString;
-
-        //            // Write a "close" response.
-        //            using (var writer = new StreamWriter(context.Response.OutputStream))
-        //            {
-        //                writer.WriteLine(ClosePageResponse);
-        //                writer.Flush();
-        //            }
-        //            context.Response.OutputStream.Close();
-
-        //            Dictionary<string, string> dict = coll.AllKeys.ToDictionary(k => k, k => coll[k]);
-
-        //            string authCode = dict["code"]; // In production, be sure to check that the "code" parameter is actually there.
-        //            string accessTokenRequestBody = string.Format(AccessBody, this._clientId, authCode, WebUtility.UrlEncode(RedirectUriLocal));
-        //            accessTokenRequestBody += "&client_secret=" + clientSecret; // Unlike GetAccessTokenAsync, GetAccessTokenFromLocalServerAsync also needs client secret.
-
-        //            AccessTokenResponse tokensFromServer = await GetTokensAsync(this.RefreshUri, accessTokenRequestBody);
-
-        //            this._accessToken = tokensFromServer.AccessToken;
-        //            this._refreshToken = tokensFromServer.RefreshToken;
-        //            this._expiration = tokensFromServer.Expiration;
-
-        //            return this._accessToken;
-        //        }
-        //        finally
-        //        {
-        //            listener.Close();
-        //        }
-        //    }
-        //}
-
-        //private static int GetRandomUnusedPort()
-        //{
-        //    var listener = new TcpListener(IPAddress.Loopback, 0);
-        //    try
-        //    {
-        //        listener.Start();
-        //        return ((IPEndPoint)listener.LocalEndpoint).Port;
-        //    }
-        //    finally
-        //    {
-        //        listener.Stop();
-        //    }
-        //}
     }
 }
