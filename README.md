@@ -9,7 +9,7 @@ Welcome to the **MailService** repository! This project is focused on building a
 - [Setup](#setup)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-- [API Setup](#api-setun)
+- [API Setup](#api-setup)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
