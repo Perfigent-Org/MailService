@@ -1,8 +1,8 @@
 ﻿namespace MailService.MailBee
 {
-    public enum ServiceType
+    public enum AuthenticationMode
     {
-        OAuth20 = 1,
-        ImapSmtp = 2
+        OAuth = 1,
+        UserCredentials = 2
     }
 }

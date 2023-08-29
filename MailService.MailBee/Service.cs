@@ -11,16 +11,61 @@ namespace MailService.MailBee
 {
     public class Service : ServiceBase, IService
     {
-        public Service(ServerType type, string userEmail, string password) : base(type)
+        private Service(ServerType serverType, AuthenticationMode authMode, string clientId, string clientSecret, string userEmail, string password) : base(serverType, authMode)
         {
+            _clientId = clientId;
+            _clientSecret = clientSecret;
             _userEmail = userEmail;
             _password = password;
         }
 
-        public Service(string clientId, string clientSecret, ServerType type) : base(type)
+        public class ServiceBuilder
         {
-            _clientId = clientId;
-            _clientSecret = clientSecret;
+            private ServerType _type;
+            private AuthenticationMode _authMode;
+            private string _clientId, _clientSecret, _userEmail, _password;
+
+            public ServiceBuilder(ServerType type)
+            {
+                _type = type;
+            }
+
+            public ServiceBuilder WithOAuthCredentials(string clientId, string clientSecret)
+            {
+                _clientId = clientId;
+                _clientSecret = clientSecret;
+                _authMode = AuthenticationMode.OAuth;
+                return this;
+            }
+
+            public ServiceBuilder WithUserCredentials(string userEmail, string password)
+            {
+                _userEmail = userEmail;
+                _password = password;
+                _authMode = AuthenticationMode.UserCredentials;
+                return this;
+            }
+
+            public Service Build()
+            {
+                switch (_authMode)
+                {
+                    case AuthenticationMode.OAuth:
+                        if (string.IsNullOrEmpty(_clientId) || string.IsNullOrEmpty(_clientSecret))
+                            throw new InvalidOperationException("OAuth credentials are not set.");
+                        break;
+
+                    case AuthenticationMode.UserCredentials:
+                        if (string.IsNullOrEmpty(_userEmail) || string.IsNullOrEmpty(_password))
+                            throw new InvalidOperationException("User credentials are not set.");
+                        break;
+
+                    default:
+                        throw new InvalidOperationException("Authentication mode is not specified.");
+                }
+
+                return new Service(_type, _authMode, _clientId, _clientSecret, _userEmail, _password);
+            }
         }
 
         public async Task<IList<long>> GetUidsAsync(string fromFolder = "")
@@ -30,7 +75,7 @@ namespace MailService.MailBee
 
             using (var imap = new Imap())
             {
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     imap.SelectFolder(fromFolder);
 
@@ -49,7 +94,7 @@ namespace MailService.MailBee
         {
             using (var imap = new Imap())
             {
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     var folders = await imap.DownloadFoldersAsync();
 
@@ -68,7 +113,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     result = await imap.CreateFolderAsync(folderName);
 
@@ -85,7 +130,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     result = await imap.RenameFolderAsync(oldFolderName, newFolderName);
 
@@ -102,7 +147,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     result = await imap.DeleteFolderAsync(folderName);
                     await imap.DisconnectAsync();
@@ -119,7 +164,7 @@ namespace MailService.MailBee
 
             using (var imap = new Imap())
             {
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     imap.SelectFolder(fromFolder);
 
@@ -143,7 +188,7 @@ namespace MailService.MailBee
 
             using (var imap = new Imap())
             {
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     imap.SelectFolder(fromFolder);
 
@@ -167,7 +212,7 @@ namespace MailService.MailBee
 
             using (var imap = new Imap())
             {
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     imap.SelectFolder(fromFolder);
 
@@ -220,7 +265,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(smtp))
+                if (Connect(smtp))
                 {
                     MailMessage message = new MailMessage();
 
@@ -267,7 +312,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(smtp))
+                if (Connect(smtp))
                 {
                     MailMessage message = new MailMessage();
 
@@ -330,7 +375,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(smtp))
+                if (Connect(smtp))
                 {
                     MailMessage message = new MailMessage();
 
@@ -373,7 +418,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(smtp))
+                if (Connect(smtp))
                 {
                     MailMessage message = new MailMessage();
 
@@ -416,7 +461,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     var uidsString = string.Join(",", uids);
 
@@ -440,7 +485,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     imap.SelectFolder(fromFolder);
 
@@ -463,7 +508,7 @@ namespace MailService.MailBee
             {
                 var result = false;
 
-                if (Login(imap))
+                if (Connect(imap))
                 {
                     imap.SelectFolder(fromFolder);
 

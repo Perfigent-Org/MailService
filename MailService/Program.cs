@@ -1,99 +1,75 @@
 ﻿using MailService.MailBee;
 using System;
+using System.Configuration;
 
 namespace MailService
 {
     public class Program
     {
+        private static string clientId;
+        private static string clientSecret;
+        private static string userEmail;
+        private static string password;
+        private static ServerType serverType;
+        private static AuthenticationMode serviceType;
+
         public static void Main(string[] args)
         {
-            ConnectMailBeeService(ServiceType.OAuth20, ServerType.Google);
-            ConnectMailBeeService(ServiceType.OAuth20, ServerType.Outlook);
-            ConnectMailBeeService(ServiceType.OAuth20, ServerType.Office365);
+            serverType = (ServerType)Convert.ToInt32(ConfigurationManager.AppSettings["ServerType"]);
 
-            ConnectMailBeeService(ServiceType.ImapSmtp, ServerType.Google);
-            ConnectMailBeeService(ServiceType.ImapSmtp, ServerType.Outlook);
-            ConnectMailBeeService(ServiceType.ImapSmtp, ServerType.Office365);
+            serviceType = (AuthenticationMode)Convert.ToInt32(ConfigurationManager.AppSettings["AuthenticationMode"]);
+
+            clientId = ConfigurationManager.AppSettings["ClientId"];
+            clientSecret = ConfigurationManager.AppSettings["ClientSecret"];
+
+            userEmail = ConfigurationManager.AppSettings["UserEmail"];
+            password = ConfigurationManager.AppSettings["Password"];
+
+            ConnectMailBeeService();
 
             Console.ReadLine();
         }
 
-        private static async void ConnectMailBeeService(ServiceType serviceType, ServerType serverType)
+        private static async void ConnectMailBeeService()
         {
+            bool isConnected = false;
+            Service mailService = null;
             try
             {
-                Service mailService = GetMailService(serviceType, serverType);
+                mailService = GetMailService();
 
                 Console.WriteLine($"Connecting {serverType} Mail Service...");
 
-                var isConnected = await mailService.Connect();
+                isConnected = await mailService.Connect();
 
                 if (isConnected) Console.WriteLine($"{serverType} mail service is ready to use...");
 
                 await MailBeeTest.GetInstance(mailService).Run();
-
-                if (isConnected) await mailService.Disconnect();
-
-                Console.WriteLine($"{serverType} mail service is now disconnected...");
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(ex.Message);
+                Console.ResetColor();
+            }
+            finally
+            {
+                if (isConnected) await mailService.Disconnect();
+
+                Console.WriteLine($"\n\n{serverType} mail service is now disconnected...");
             }
         }
 
-        private static Service GetMailService(ServiceType serviceType, ServerType serverType)
+        private static Service GetMailService()
         {
-            Service mailService;
             switch (serviceType)
             {
-                case ServiceType.OAuth20:
+                case AuthenticationMode.OAuth: return new Service.ServiceBuilder(serverType).WithOAuthCredentials(clientId, clientSecret).Build();
 
-                    switch (serverType)
-                    {
-                        case ServerType.Google:
-                            mailService = new Service("Google-ClientId", "Gmail-ClientSecret", serverType);
-                            break;
+                case AuthenticationMode.UserCredentials: return new Service.ServiceBuilder(serverType).WithUserCredentials(userEmail, password).Build();
 
-                        case ServerType.Office365:
-                            mailService = new Service("Office365-ClientId", "Office365-ClientSecret", serverType);
-                            break;
-
-                        case ServerType.Outlook:
-                            mailService = new Service("Outlook-ClientId", "Outlook-ClientSecret", serverType);
-                            break;
-
-                        default:
-                            throw new Exception("Server type must be Google, Office365 or Outlook");
-                    }
-                    break;
-
-                case ServiceType.ImapSmtp:
-
-                    switch (serverType)
-                    {
-                        case ServerType.Google:
-                            mailService = new Service(serverType, "AnyAccountName@gmail.com", "AnyAccountPassword");
-                            break;
-
-                        case ServerType.Office365:
-                            mailService = new Service(serverType, "AnyAccountName@outlook.com", "AnyAccountPassword");
-                            break;
-
-                        case ServerType.Outlook:
-                            mailService = new Service(serverType, "AnyAccountName@hotmail.com", "AnyAccountPassword");
-                            break;
-
-                        default:
-                            throw new Exception("Server type must be Google, Office365 or Outlook");
-                    }
-                    break;
-
-                default:
-                    throw new Exception("Service type must be OAuth20 or ImapSmtp");
+                default: throw new Exception("Service type must be OAuth or UserCredentials");
             }
-
-            return mailService;
         }
     }
 }
