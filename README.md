@@ -10,6 +10,7 @@ Welcome to the **MailService** repository! This project is focused on building a
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
 - [API Setup](#api-setup)
+- [Configuration](#configuration)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
@@ -56,6 +57,28 @@ The **MailService** repository is designed to provide users with an email servic
    - Sign in to the [Azure portal](https://portal.azure.com/).
    - Create a new App Registration.
    - Configure API permissions for Microsoft Graph API and Outlook.
+  
+## Configuration
+
+Update the following settings in the `App.config` file:
+
+```xml
+<appSettings>
+    <!-- ServerType: Google = 1, Outlook = 2, Office365 = 3 -->
+    <add key="ServerType" value="1" />
+    
+    <!-- AuthenticationMode: OAuth = 1, UserCredentials = 2 -->
+    <add key="AuthenticationMode" value="2" />
+
+    <add key="ClientId" value="ENTER YOUR CLIENT ID" />
+    <add key="ClientSecret" value="ENTER YOUR CLIENT SECRET" />
+
+    <add key="UserEmail" value="ENTER USER EMAIL" />
+    <add key="Password" value="ENTER USER PASSWORD" />
+</appSettings>
+```
+
+You can replace the placeholders (`ENTER YOUR CLIENT ID`, `ENTER YOUR CLIENT SECRET`, `ENTER USER EMAIL`, and `ENTER USER PASSWORD`) with the actual values in your `App.config` file.
 
 ## Usage
 
