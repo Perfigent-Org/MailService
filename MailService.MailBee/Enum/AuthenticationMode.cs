@@ -1,4 +1,4 @@
-﻿namespace MailService.MailBee
+﻿namespace MailService.MailBee.Enum
 {
     public enum AuthenticationMode
     {

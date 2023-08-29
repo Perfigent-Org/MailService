@@ -1,4 +1,5 @@
 ﻿using MailService.MailBee;
+using MailService.MailBee.Enum;
 using System;
 using System.Configuration;
 
@@ -11,13 +12,13 @@ namespace MailService
         private static string userEmail;
         private static string password;
         private static ServerType serverType;
-        private static AuthenticationMode serviceType;
+        private static AuthenticationMode authenticationMode;
 
         public static void Main(string[] args)
         {
             serverType = (ServerType)Convert.ToInt32(ConfigurationManager.AppSettings["ServerType"]);
 
-            serviceType = (AuthenticationMode)Convert.ToInt32(ConfigurationManager.AppSettings["AuthenticationMode"]);
+            authenticationMode = (AuthenticationMode)Convert.ToInt32(ConfigurationManager.AppSettings["AuthenticationMode"]);
 
             clientId = ConfigurationManager.AppSettings["ClientId"];
             clientSecret = ConfigurationManager.AppSettings["ClientSecret"];
@@ -38,7 +39,7 @@ namespace MailService
             {
                 mailService = GetMailService();
 
-                Console.WriteLine($"Connecting {serverType} Mail Service...");
+                Console.WriteLine($"Connecting {serverType} Mail Service with {authenticationMode} Mode...");
 
                 isConnected = await mailService.Connect();
 
@@ -62,13 +63,13 @@ namespace MailService
 
         private static Service GetMailService()
         {
-            switch (serviceType)
+            switch (authenticationMode)
             {
                 case AuthenticationMode.OAuth: return new Service.ServiceBuilder(serverType).WithOAuthCredentials(clientId, clientSecret).Build();
 
                 case AuthenticationMode.UserCredentials: return new Service.ServiceBuilder(serverType).WithUserCredentials(userEmail, password).Build();
 
-                default: throw new Exception("Service type must be OAuth or UserCredentials");
+                default: throw new Exception("Authentication mode must be OAuth or UserCredentials");
             }
         }
     }
