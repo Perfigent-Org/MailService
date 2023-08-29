@@ -1,6 +1,7 @@
 ﻿using MailBee;
 using MailBee.ImapMail;
 using MailBee.SmtpMail;
+using MailService.MailBee.Enum;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
