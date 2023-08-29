@@ -13,12 +13,20 @@ namespace MailService.MailBee
         protected readonly string _imapServerName;
         protected readonly string _smtpServerName;
         protected readonly ServerType _serverType;
+        protected readonly AuthenticationMode _authMode;
 
         protected string _clientId;
         protected string _clientSecret;
         protected string _userEmail;
         protected string _password;
         protected string _accessToken;
+
+        private readonly Dictionary<ServerType, (string imap, string smtp)> _serverMapping = new Dictionary<ServerType, (string, string)>
+        {
+            { ServerType.Google, ("imap.gmail.com", "smtp.gmail.com") },
+            { ServerType.Office365, ("outlook.office365.com", "smtp.office365.com") },
+            { ServerType.Outlook, ("imap-mail.outlook.com", "smtp-mail.outlook.com") }
+        };
 
         protected readonly HashSet<string> BLACKLISTED_EXTENSIONS = new HashSet<string>
         {
@@ -30,35 +38,18 @@ namespace MailService.MailBee
 
         protected readonly long MAX_ATTACHMENT_SIZE = 19000000; //around 19 MB to account for MIME encoding
 
-        private bool IsFrom0Auth => string.IsNullOrWhiteSpace(_password);
-
         public string Email => _userEmail;
 
         public string InboxFolderName { get; set; }
         public string ArchiveFolderName { get; set; }
         public string LogFileName { get; private set; }
 
-        public ServiceBase(ServerType type)
+        public ServiceBase(ServerType type, AuthenticationMode authMode)
         {
             _serverType = type;
+            _authMode = authMode;
 
-            switch (_serverType)
-            {
-                case ServerType.Google:
-                    _imapServerName = "imap.gmail.com";
-                    _smtpServerName = "smtp.gmail.com";
-                    break;
-
-                case ServerType.Office365:
-                    _imapServerName = "outlook.office365.com";
-                    _smtpServerName = "smtp.office365.com";
-                    break;
-
-                case ServerType.Outlook:
-                    _imapServerName = "imap-mail.outlook.com";
-                    _smtpServerName = "smtp-mail.outlook.com";
-                    break;
-            }
+            (_imapServerName, _smtpServerName) = _serverMapping[_serverType];
 
             ArchiveFolderName = "Archive";
             InboxFolderName = "INBOX";
@@ -68,7 +59,7 @@ namespace MailService.MailBee
 
         public async Task<bool> Connect()
         {
-            if (IsFrom0Auth)
+            if (_authMode == AuthenticationMode.OAuth)
             {
                 switch (_serverType)
                 {
@@ -92,7 +83,7 @@ namespace MailService.MailBee
 
         public async Task Disconnect()
         {
-            if (IsFrom0Auth)
+            if (_authMode == AuthenticationMode.OAuth)
             {
                 switch (_serverType)
                 {
@@ -110,7 +101,7 @@ namespace MailService.MailBee
             }
         }
 
-        protected bool Login(IComponent component)
+        protected bool Connect(IComponent component)
         {
             AddLogFile(component);
 
@@ -118,7 +109,7 @@ namespace MailService.MailBee
             {
                 imap.Connect(_imapServerName);
 
-                if (IsFrom0Auth)
+                if (_authMode == AuthenticationMode.OAuth)
                 {
                     string xoauthKey = OAuth2.GetXOAuthKeyStatic(_userEmail, _accessToken);
                     return imap.Login(null, xoauthKey, AuthenticationMethods.SaslOAuth2, AuthenticationOptions.None, null);
@@ -130,7 +121,7 @@ namespace MailService.MailBee
             }
             else if (component is Smtp smtp)
             {
-                if (IsFrom0Auth)
+                if (_authMode == AuthenticationMode.OAuth)
                 {
                     string xoauthKey = OAuth2.GetXOAuthKeyStatic(_userEmail, _accessToken);
                     smtp.SmtpServers.Add(_smtpServerName, null, xoauthKey, AuthenticationMethods.SaslOAuth2).Port = 587;

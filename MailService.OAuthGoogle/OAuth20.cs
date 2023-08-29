@@ -25,9 +25,9 @@ namespace MailService.OAuthGoogle
                     ClientId = clientId,
                     ClientSecret = clientSecret,
                 },
-                 scopes,
-                 clientId,
-                 CancellationToken.None);
+                scopes,
+                clientId,
+                CancellationToken.None);
 
             Console.WriteLine("Authorization granted or not required (if the saved access token already available)");
 
@@ -51,6 +51,7 @@ namespace MailService.OAuthGoogle
             }
 
             return await GetToken(credential);
+
             //bool revokeToken = false;
             //if (revokeToken)
             //{
